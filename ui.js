@@ -148,12 +148,12 @@ function updatePositionsList(options){
 
             // Build the option type of the position
             const typeDiv = document.createElement('div');
-            typeDiv.textContent = option.type.toUpperCase() + ' - Strike $' + option.strike;
+            typeDiv.textContent = option.type.toUpperCase() + ' @ Strike $' + option.strike;
             positionDiv.appendChild(typeDiv);
 
             // Build the time remaining of the position
             const timeDiv = document.createElement('div');
-            timeDiv.textContent = 'Time left: ' + formatTime(option.timeLeft);
+            timeDiv.textContent = 'Time Left: ' + formatTime(option.timeLeft);
             positionDiv.appendChild(timeDiv);
 
             // Build purchase price
