@@ -14,3 +14,7 @@ Features
 - Realistic pricing and simulated stock movement calculated using Black Scholes and Geometric Brownian Motion
 - Real time intrinsic value, time value, and PnL calculations on player's active positions
 - Some fun and dynamic background music!  
+
+<hr>
+
+Not financial advice. Have fun playing!
