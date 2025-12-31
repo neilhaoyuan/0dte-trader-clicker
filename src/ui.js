@@ -202,7 +202,7 @@ function formatTime(seconds) {
 
 // Setups music toggle button and defines its behaviour
 function setupMusicToggle(bgMusic) {
-    let musicStopped = false;
+    let musicStopped = true;
     const musicToggle = document.getElementById('music-toggle');
 
     // Checks if music is currently playing and determines click action accordingly 
