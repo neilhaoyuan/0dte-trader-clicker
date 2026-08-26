@@ -30,13 +30,14 @@ Deno.serve(async (req) => {
     const sessionId = String(body.sessionId || '');
     const playerName = cleanPlayerName(body.playerName);
     const score = Number(body.score);
+    const peakCash = Number(body.peakCash || body.score);
     const level = Number(body.level);
 
-    if (!sessionId || !Number.isFinite(score) || !Number.isInteger(level)) {
+    if (!sessionId || !Number.isFinite(score) || !Number.isFinite(peakCash) || !Number.isInteger(level)) {
         return jsonResponse({ error: 'Missing or invalid score data' }, 400);
     }
 
-    if (score < 0 || score > MAX_REASONABLE_SCORE || level < 1 || level > 1000) {
+    if (score < 0 || peakCash < score || peakCash > MAX_REASONABLE_SCORE || score > MAX_REASONABLE_SCORE || level < 1 || level > 1000) {
         return jsonResponse({ error: 'Score rejected' }, 400);
     }
 
@@ -70,6 +71,7 @@ Deno.serve(async (req) => {
                 session_id: sessionId,
                 player_name: playerName,
                 score: Number(score.toFixed(2)),
+                peak_cash: Number(peakCash.toFixed(2)),
                 level
             });
 

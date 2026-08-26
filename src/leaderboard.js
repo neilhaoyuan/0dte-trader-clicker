@@ -140,13 +140,14 @@ async function startLeaderboardSession() {
     return result.sessionId;
 }
 
-async function submitScore(playerName, score, level) {
+async function submitScore(playerName, score, level, peakCash) {
     if (!isBackendConfigured()) {
         const localScores = JSON.parse(localStorage.getItem(LOCAL_LEADERBOARD_KEY) || '[]');
 
         localScores.push({
             player_name: cleanPlayerName(playerName),
             score: Number(score.toFixed(2)),
+            peak_cash: Number((peakCash || score).toFixed(2)),
             level: level,
             created_at: new Date().toISOString()
         });
@@ -168,6 +169,7 @@ async function submitScore(playerName, score, level) {
             sessionId,
             playerName: cleanPlayerName(playerName),
             score: Number(score.toFixed(2)),
+            peakCash: Number((peakCash || score).toFixed(2)),
             level: level
         })
     });

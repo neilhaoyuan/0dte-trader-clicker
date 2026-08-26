@@ -122,6 +122,7 @@ Game Logic class that holds the game's functions
 class GameLogic {
     constructor() {
         this.cash = 10;
+        this.peakCash = 10;
         this.level = 1;
         this.xp = 0;
         this.stock = new StockSimulator();
@@ -143,6 +144,7 @@ class GameLogic {
                 type: type,
                 purchasePrice: price,
                 currentValue: price});
+            this.updatePeakCash();
             saveGame(this);
             return true;
         }
@@ -157,6 +159,7 @@ class GameLogic {
         // Determines the payoff (uses Black Scholes function as we have a catch statement in there)
         const payoff = roundToCents(blackScholes(this.stock.getPrice(), option.strike, 0, 0.05, 2, option.type));
         this.cash += payoff;
+        this.updatePeakCash();
         option.currentValue = payoff;
         option.timeLeft = 0;
         option.settled = true;
@@ -208,11 +211,18 @@ class GameLogic {
     getUserState(){
         return {
             cash: this.cash,
+            peakCash: this.peakCash,
             level: this.level,
             xp: this.xp,
             stockPrice: this.stock.getPrice(),
             options: this.settledOptions.concat(this.activeOptions)
         };
+    }
+
+    updatePeakCash(){
+        if (this.cash > this.peakCash) {
+            this.peakCash = this.cash;
+        }
     }
 
     // Determine strike prices based on current price
@@ -254,6 +264,7 @@ Functions that save game state for future games
 function saveGame(gameLogic) {
     const gameState = {
         cash: gameLogic.cash,
+        peakCash: gameLogic.peakCash,
         level: gameLogic.level,
         xp: gameLogic.xp,
         stockPrice: gameLogic.stock.price
@@ -268,6 +279,7 @@ function loadGame(gameLogic) {
         try {
             const gameState = JSON.parse(saved);
             gameLogic.cash = gameState.cash || 10;
+            gameLogic.peakCash = gameState.peakCash || gameLogic.cash;
             gameLogic.level = gameState.level || 1;
             gameLogic.xp = gameState.xp || 0;
             gameLogic.stock.price = gameState.stockPrice || 100;

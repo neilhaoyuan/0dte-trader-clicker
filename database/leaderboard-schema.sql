@@ -3,6 +3,7 @@ create table if not exists public.leaderboard_scores (
     session_id uuid unique,
     player_name text not null check (char_length(player_name) between 1 and 20),
     score numeric(12, 2) not null check (score >= 0),
+    peak_cash numeric(12, 2) not null default 0 check (peak_cash >= 0),
     level integer not null check (level >= 1),
     created_at timestamptz not null default now()
 );

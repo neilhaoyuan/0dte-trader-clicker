@@ -50,7 +50,7 @@ window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('give-up-button').addEventListener('click', function() {
         const gameState = game.getUserState();
         localStorage.removeItem('optionsGameState'); 
-        showGameOver(gameState.cash, gameState.level);
+        showGameOver(gameState.cash, gameState.level, gameState.peakCash);
     });
 
     document.getElementById('leaderboard-toggle').addEventListener('click', function(event) {
@@ -84,13 +84,14 @@ window.addEventListener('DOMContentLoaded', function() {
         const submitButton = document.getElementById('submit-score-button');
         const playerName = document.getElementById('player-name').value;
         const score = Number(form.dataset.score || 0);
+        const peakCash = Number(form.dataset.peakCash || score);
         const level = Number(form.dataset.level || 1);
 
         submitButton.disabled = true;
         setLeaderboardMessage('Submitting...');
 
         try {
-            await submitScore(playerName, score, level);
+            await submitScore(playerName, score, level, peakCash);
             setLeaderboardMessage('Score submitted');
         } catch (error) {
             submitButton.disabled = false;

@@ -320,13 +320,15 @@ gameOverQuotes = [
 ];
 
 // Updates the game over screen
-function showGameOver(cash, level) {
+function showGameOver(cash, level, peakCash) {
     // Update the stats and then shows the screen
     document.getElementById('final-cash').textContent = "Final Cash: $" + cash.toFixed(2);
+    document.getElementById('peak-cash').textContent = "Peak Cash: $" + peakCash.toFixed(2);
     document.getElementById('final-level').textContent = "Final Level: " + level;
     document.getElementById('game-over-screen').style.display = 'flex';
     document.getElementById('game-over-quote').textContent = gameOverQuotes[Math.floor(Math.random() * gameOverQuotes.length)];
     document.getElementById('score-submit-form').dataset.score = cash.toFixed(2);
+    document.getElementById('score-submit-form').dataset.peakCash = peakCash.toFixed(2);
     document.getElementById('score-submit-form').dataset.level = level;
     loadLeaderboard();
 }
