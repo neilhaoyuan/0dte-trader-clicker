@@ -37,9 +37,12 @@ window.addEventListener('DOMContentLoaded', function() {
     const musicControl = setupMusicToggle(bgMusic);
     
     // Start game and music after clicking start game button, load any previous saves
-    document.getElementById('start-button').addEventListener('click', function() {
+    document.getElementById('start-button').addEventListener('click', async function() {
         document.getElementById('start-screen').style.display = 'none';
         loadGame(game);
+        await startLeaderboardSession().catch(function(error) {
+            console.error(error);
+        });
         loadTrack(0);
     });
 
@@ -50,10 +53,53 @@ window.addEventListener('DOMContentLoaded', function() {
         showGameOver(gameState.cash, gameState.level);
     });
 
+    document.getElementById('leaderboard-toggle').addEventListener('click', function(event) {
+        event.stopPropagation();
+        const leaderboardMenu = document.getElementById('leaderboard-menu');
+        leaderboardMenu.hidden = !leaderboardMenu.hidden;
+
+        if (!leaderboardMenu.hidden) {
+            loadLeaderboard();
+        }
+    });
+
+    document.addEventListener('click', function(event) {
+        const leaderboardMenu = document.getElementById('leaderboard-menu');
+        const leaderboardToggle = document.getElementById('leaderboard-toggle');
+
+        if (!leaderboardMenu.contains(event.target) && event.target !== leaderboardToggle) {
+            leaderboardMenu.hidden = true;
+        }
+    });
+
     // Event listener that restarts the game
     document.getElementById('restart-button').addEventListener('click', function() {
         location.reload();
     });
+
+    document.getElementById('score-submit-form').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const form = event.currentTarget;
+        const submitButton = document.getElementById('submit-score-button');
+        const playerName = document.getElementById('player-name').value;
+        const score = Number(form.dataset.score || 0);
+        const level = Number(form.dataset.level || 1);
+
+        submitButton.disabled = true;
+        setLeaderboardMessage('Submitting...');
+
+        try {
+            await submitScore(playerName, score, level);
+            setLeaderboardMessage('Score submitted');
+        } catch (error) {
+            submitButton.disabled = false;
+            setLeaderboardMessage(error.message || 'Submit failed');
+            console.error(error);
+        }
+    });
+
+    loadLeaderboard();
 
     // Create the price chart
     const chart = document.getElementById('price-chart').getContext('2d');

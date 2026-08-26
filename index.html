@@ -29,6 +29,20 @@
                 <div id="final-cash">1</div>
                 <div id="final-level">1</div>
             </div>
+            <form id="score-submit-form" class="leaderboard-form">
+                <label for="player-name">Trader Name</label>
+                <div class="submit-row">
+                    <input id="player-name" class="nes-input" name="player-name" maxlength="20" autocomplete="nickname" placeholder="DGEN" required>
+                    <button id="submit-score-button" class="nes-btn is-primary" type="submit">SUBMIT</button>
+                </div>
+                <div id="score-submit-status" class="leaderboard-status"></div>
+            </form>
+            <div class="leaderboard-panel">
+                <h2>Global Leaderboard</h2>
+                <ol id="game-over-leaderboard" class="leaderboard-list">
+                    <li>Loading...</li>
+                </ol>
+            </div>
             <button id="restart-button" class="nes-btn is-error">TRY AGAIN</button>
         </div>
     </div>
@@ -57,8 +71,17 @@
 
         <div class="button-group">
             <button id="music-toggle">Music ON!</button>
+            <button id="leaderboard-toggle" type="button">Top Traders</button>
             <button id="give-up-button">Give Up</button>
         </div>
+    </div>
+
+    <div id="leaderboard-menu" class="leaderboard-menu" hidden>
+        <h3>Top Traders</h3>
+        <ol id="leaderboard-list" class="leaderboard-list">
+            <li>Loading...</li>
+        </ol>
+        <div id="leaderboard-message" class="leaderboard-status"></div>
     </div>
 
     <!-- Main content area -->
@@ -113,6 +136,7 @@
     </div>
 
     <script src="src/game.js"></script>
+    <script src="src/leaderboard.js"></script>
     <script src="src/ui.js"></script>
     <script src="src/main.js"></script>
 </body>

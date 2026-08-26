@@ -325,4 +325,7 @@ function showGameOver(cash, level) {
     document.getElementById('final-level').textContent = "Final Level: " + level;
     document.getElementById('game-over-screen').style.display = 'flex';
     document.getElementById('game-over-quote').textContent = gameOverQuotes[Math.floor(Math.random() * gameOverQuotes.length)];
+    document.getElementById('score-submit-form').dataset.score = cash.toFixed(2);
+    document.getElementById('score-submit-form').dataset.level = level;
+    loadLeaderboard();
 }
