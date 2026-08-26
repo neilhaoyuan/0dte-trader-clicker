@@ -126,6 +126,7 @@ class GameLogic {
         this.xp = 0;
         this.stock = new StockSimulator();
         this.activeOptions = [];
+        this.settledOptions = [];
     }
 
     // Buys options
@@ -156,12 +157,17 @@ class GameLogic {
         // Determines the payoff (uses Black Scholes function as we have a catch statement in there)
         const payoff = roundToCents(blackScholes(this.stock.getPrice(), option.strike, 0, 0.05, 2, option.type));
         this.cash += payoff;
+        option.currentValue = payoff;
+        option.timeLeft = 0;
+        option.settled = true;
+        option.settledTicksLeft = 4;
 
         // Determines profit to see if XP should be awarded
         const profit = payoff - option.purchasePrice
             if (profit > 0){
                 this.xp += Math.floor(profit * 10);
             }
+        this.settledOptions.unshift(option);
         saveGame(this);
     }
 
@@ -189,6 +195,12 @@ class GameLogic {
 
         // Removes settled option from list
         this.activeOptions = this.activeOptions.filter(curOpt => curOpt.timeLeft > 0);
+        this.settledOptions.forEach(function(option) {
+            option.settledTicksLeft -= 1;
+        });
+        this.settledOptions = this.settledOptions.filter(function(option) {
+            return option.settledTicksLeft > 0;
+        });
         saveGame(this);
     }
 
@@ -199,7 +211,7 @@ class GameLogic {
             level: this.level,
             xp: this.xp,
             stockPrice: this.stock.getPrice(),
-            options: this.activeOptions
+            options: this.settledOptions.concat(this.activeOptions)
         };
     }
 

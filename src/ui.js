@@ -43,13 +43,14 @@ function generateOptions(gameLogic){
     const callElements = document.getElementById('call-options');
     const putElements = document.getElementById('put-options');
     const possibleExpiry = [3600, 7200, 10800, 14400] // 1, 2, 3, adn 4 hours respectively in seconds
+    const optionCount = 3;
 
     // Clear out the inside of the call and put elements, prep work for new buttons
     callElements.innerHTML = '';
     putElements.innerHTML = '';
 
-    // Generate 3 unique call options
-    for (let i = 0; i < 3; i++){
+    // Generate unique call options
+    for (let i = 0; i < optionCount; i++){
         // Constructing the random call option's details
         const randomStrike = availableStrikes[Math.floor(Math.random() * availableStrikes.length)];
         const randomExpiry = possibleExpiry[Math.floor(Math.random() * possibleExpiry.length)];
@@ -82,8 +83,8 @@ function generateOptions(gameLogic){
         callElements.appendChild(button);
     }
 
-    // Generate 3 unique put options
-    for (let i = 0; i < 3; i++){
+    // Generate unique put options
+    for (let i = 0; i < optionCount; i++){
         // Constructing the random call option's details
         const randomStrike = availableStrikes[Math.floor(Math.random() * availableStrikes.length)];
         const randomExpiry = possibleExpiry[Math.floor(Math.random() * possibleExpiry.length)];
@@ -148,12 +149,12 @@ function updatePositionsList(options){
 
             // Build the option type of the position
             const typeDiv = document.createElement('div');
-            typeDiv.textContent = option.type.toUpperCase() + ' @ Strike $' + option.strike;
+            typeDiv.textContent = option.type.toUpperCase() + ' @ Strike $' + option.strike + (option.settled ? ' | SETTLED' : '');
             positionDiv.appendChild(typeDiv);
 
             // Build the time remaining of the position
             const timeDiv = document.createElement('div');
-            timeDiv.textContent = 'Time Left: ' + formatTime(option.timeLeft);
+            timeDiv.textContent = option.settled ? 'Final Result' : 'Time Left: ' + formatTime(option.timeLeft);
             positionDiv.appendChild(timeDiv);
 
             // Build purchase price
