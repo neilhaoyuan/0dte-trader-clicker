@@ -76,15 +76,19 @@ function blackScholes(S, K, T, r, sigma, type){
     return price;
 }
 
+function roundToCents(amount) {
+    return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
 /*
 Geometric Brownian Motion 
 Stock Price Simulator
 */
 
 class StockSimulator {
-    constructor(initialPrice = 100, sigma = 2, drift = 0) {
+    constructor(initialPrice = 100, sigma = 1.35, drift = 0) {
         this.price = initialPrice; // Set to 100 for default price
-        this.sigma = sigma; // Set to 2 by default, simulates 200% volatility to match to extreme volatilty of a meme stock
+        this.sigma = sigma; // Set to 1.35 by default, simulates 120% volatility to match to high volatilty of a meme stock
         this.drift = drift; // Set to 0 by default, simulates the fact that a meme stock has no real trend, just complete randomness
     }
 
@@ -127,7 +131,7 @@ class GameLogic {
     // Buys options
     buyOption(strike, expirySeconds, type){
         const T = expirySeconds / (365 * 24 * 60 * 60); // Annualize in-game expirySeconds for Black Scholes
-        const price = blackScholes(this.stock.getPrice(), strike, T, 0.05, 2, type); // Determine price
+        const price = roundToCents(blackScholes(this.stock.getPrice(), strike, T, 0.05, 2, type)); // Determine price
         
         // Push object of bought optional detail into list if we can buy it
         if (this.cash >= price){
@@ -150,7 +154,7 @@ class GameLogic {
     // Settles expired options
     settleOut(option){
         // Determines the payoff (uses Black Scholes function as we have a catch statement in there)
-        const payoff = blackScholes(this.stock.getPrice(), option.strike, 0, 0.05, 2, option.type);
+        const payoff = roundToCents(blackScholes(this.stock.getPrice(), option.strike, 0, 0.05, 2, option.type));
         this.cash += payoff;
 
         // Determines profit to see if XP should be awarded
@@ -163,7 +167,7 @@ class GameLogic {
 
     // Updates logic
     tick(){
-        const SEC_PER_TICK = 900;  // 8 in-game minutes per tick
+        const SEC_PER_TICK = 900;  // 15 in-game minutes per tick
 
         this.stock.tick(); // Update stock price
 
@@ -179,7 +183,7 @@ class GameLogic {
             else {
                 // Finds new value of option at new time
                 const newTime = curOpt.timeLeft / (365 * 24 * 60 * 60);
-                curOpt.currentValue = blackScholes(this.stock.getPrice(), curOpt.strike, newTime, 0.05, 2, curOpt.type);
+                curOpt.currentValue = roundToCents(blackScholes(this.stock.getPrice(), curOpt.strike, newTime, 0.05, 2, curOpt.type));
             }
         }
 
@@ -213,7 +217,7 @@ class GameLogic {
     // Calculates option price without purchasing it
     getOptionPrice(strike, expirySeconds, type){
         const T = expirySeconds / (365 * 24 * 60 * 60); // Annualize in-game expirySeconds for Black Scholes
-        const price = blackScholes(this.stock.getPrice(), strike, T, 0.05, 2, type); // Determine price
+        const price = roundToCents(blackScholes(this.stock.getPrice(), strike, T, 0.05, 2, type)); // Determine price
 
         return price;
     }

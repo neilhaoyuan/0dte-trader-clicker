@@ -3,8 +3,9 @@ body{
     margin: 0;
     padding: 20px;
     background-color: #CAE7B9;
-    overflow-x: hidden;
-    overflow-y: auto;
+    box-sizing: border-box;
+    height: 100vh;
+    overflow: hidden;
 }
 
 /* Start page */
@@ -221,7 +222,7 @@ body{
 .sprite-image {
     width: 180px;
     height: 180px;
-    margin-top: -40px;
+    margin-top: -30px;
 }
 
 /* Right panel styling */
@@ -253,7 +254,7 @@ body{
 
 .positions-list {
     font-size: 10px;
-    max-height: 190px;
+    max-height: 180px;
     overflow-y: auto;
     border: 2px solid #000;
     padding: 2px;
