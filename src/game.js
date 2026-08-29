@@ -145,25 +145,14 @@ class GameLogic {
         // Push object of bought optional detail into list if we can buy it
         if (this.canAfford(totalPrice)){
             this.spendCash(totalPrice);
-            const existingOption = this.activeOptions.find(function(option) {
-                return option.strike === strike &&
-                    option.timeLeft === expirySeconds &&
-                    option.type === type &&
-                    option.purchasePrice === price;
+            this.activeOptions.push({
+                strike: strike,
+                timeLeft: expirySeconds,
+                type: type,
+                quantity: optionQuantity,
+                purchasePrice: price,
+                currentValue: price
             });
-
-            if (existingOption) {
-                existingOption.quantity += optionQuantity;
-            } else {
-                this.activeOptions.push({
-                    strike: strike,
-                    timeLeft: expirySeconds,
-                    type: type,
-                    quantity: optionQuantity,
-                    purchasePrice: price,
-                    currentValue: price
-                });
-            }
             this.updatePeakCash();
             saveGame(this);
             return true;

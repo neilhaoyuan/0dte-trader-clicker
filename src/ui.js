@@ -82,6 +82,26 @@ function formatSignedDollars(amount) {
     return sign + '$' + Math.abs(amount).toFixed(2);
 }
 
+function formatDollars(amount) {
+    return '$' + amount.toFixed(2);
+}
+
+function formatQuantityDollars(total, each, quantity) {
+    if (quantity === 1) {
+        return formatDollars(total);
+    }
+
+    return formatDollars(total) + ' | ' + formatDollars(each) + ' x ' + quantity;
+}
+
+function formatQuantitySignedDollars(total, each, quantity) {
+    if (quantity === 1) {
+        return formatSignedDollars(total);
+    }
+
+    return formatSignedDollars(total) + ' | ' + formatSignedDollars(each) + ' x ' + quantity;
+}
+
 function showLevelUpToasts(levelUps) {
     const toastArea = document.getElementById('toast-area');
     if (!toastArea || !levelUps || levelUps.length === 0) {
@@ -247,7 +267,7 @@ function updatePositionsList(options, gameLogic){
 
             // Build the option type of the position
             const typeDiv = document.createElement('div');
-            typeDiv.textContent = quantity + 'x ' + option.type.toUpperCase() + ' @ Strike $' + option.strike + (option.settled ? (option.soldEarly ? ' | SOLD' : ' | SETTLED') : '');
+            typeDiv.textContent = (quantity > 1 ? quantity + 'x ' : '') + option.type.toUpperCase() + ' @ Strike $' + option.strike + (option.settled ? (option.soldEarly ? ' | SOLD' : ' | SETTLED') : '');
             positionDiv.appendChild(typeDiv);
 
             // Build the time remaining of the position
@@ -257,21 +277,23 @@ function updatePositionsList(options, gameLogic){
 
             // Build purchase price
             const purchaseDiv = document.createElement('div');
-            purchaseDiv.textContent = 'Paid: $' + option.purchasePrice.toFixed(2) + ' x ' + quantity + ' = $' + (option.purchasePrice * quantity).toFixed(2);
+            const totalPurchasePrice = option.purchasePrice * quantity;
+            purchaseDiv.textContent = 'Paid: ' + formatQuantityDollars(totalPurchasePrice, option.purchasePrice, quantity);
             positionDiv.appendChild(purchaseDiv);
 
             // Build the value of the position
             const valueDiv = document.createElement('div');
+            const totalCurrentValue = option.currentValue * quantity;
             if (option.soldEarly) {
-                valueDiv.textContent = 'Sold For: $' + option.currentValue.toFixed(2) + ' x ' + quantity + ' = $' + (option.currentValue * quantity).toFixed(2);
+                valueDiv.textContent = 'Sold For: ' + formatQuantityDollars(totalCurrentValue, option.currentValue, quantity);
             } else {
-                valueDiv.textContent = (option.settled ? 'Value at Settlement: $' : 'Current Value: $') + option.currentValue.toFixed(2) + ' x ' + quantity + ' = $' + (option.currentValue * quantity).toFixed(2);
+                valueDiv.textContent = (option.settled ? 'Value at Settlement: ' : 'Current Value: ') + formatQuantityDollars(totalCurrentValue, option.currentValue, quantity);
             }
             positionDiv.appendChild(valueDiv);
 
             // Build the PnL of the position
             const plDiv = document.createElement('div');
-            plDiv.textContent = 'P/L: ' + formatSignedDollars(profitLoss) + ' | ' + formatSignedDollars(profitLossEach) + ' x ' + quantity;
+            plDiv.textContent = 'P/L: ' + formatQuantitySignedDollars(profitLoss, profitLossEach, quantity);
             plDiv.style.color = profitColor;
             positionDiv.appendChild(plDiv);
 
