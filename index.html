@@ -55,26 +55,39 @@
 
     <!-- Creating status bar at top of screen, holds cash, level and xp -->
     <div class="status-bar">
-        <div class="stat">
-            <span class="label">Cash:</span>
-            <span id="cash" class="value">$10.00</span>
-        </div>
+        <div class="stats-group">
+            <div class="stat">
+                <span class="label">Cash:</span>
+                <span id="cash" class="value">$10.00</span>
+            </div>
 
-        <div class="stat">
-            <span class="label">Level:</span>
-            <span id="level" class="value">1</span>
-        </div>
+            <div id="margin-status" class="stat" hidden>
+                <span class="label">Debt:</span>
+                <span id="margin-debt" class="value">$0.00</span>
+            </div>
 
-        <div class="stat">
-            <span class="label">XP:</span>
-            <span id="xp" class="value">0/100</span>
+            <div class="stat">
+                <span class="label">Lv:</span>
+                <span id="level" class="value">1</span>
+            </div>
+
+            <div class="stat">
+                <span class="label">XP:</span>
+                <span id="xp" class="value">0/100</span>
+            </div>
         </div>
 
         <div class="button-group">
+            <button id="perks-toggle" type="button">Perks</button>
             <button id="music-toggle">Music ON!</button>
             <button id="leaderboard-toggle" type="button">Top Traders</button>
             <button id="give-up-button">Give Up</button>
         </div>
+    </div>
+
+    <div id="perks-menu" class="perks-menu" hidden>
+        <h3>PERKS</h3>
+        <ul id="perks-list" class="perks-list"></ul>
     </div>
 
     <div id="leaderboard-menu" class="leaderboard-menu" hidden>
@@ -109,24 +122,34 @@
         <!-- Right side, holds options purchasing and current purchases -->
         <div class="right-panel">
             <div class="buy-option">
-                <div class="refresh-timer">Refreshing options market: <span id="countdown">10</span></div>
+                <div class="refresh-timer">
+                    <span>Refreshing options market: <span id="countdown">15</span></span>
+                    <button id="force-refresh-button" type="button" aria-label="Refresh Market" title="Refresh Market" hidden>&#8635;</button>
+                </div>
 
                 <!-- Grid that shows the options that can be bought, split into Calls and Puts -->
                 <div class="options-grid">
                     <div class="call-column">
-                        <h4>Purchase Calls</h4>
+                        <div class="option-heading-row">
+                            <h4>Purchase Calls</h4>
+                            <input id="call-quantity" type="number" min="1" max="99" value="1" aria-label="Call quantity" disabled>
+                        </div>
                         <div id="call-options">Options loading...</div>
                     </div>
 
                     <div class="puts-column">
-                        <h4>Purchase Puts</h4>
+                        <div class="option-heading-row">
+                            <h4>Purchase Puts</h4>
+                            <input id="put-quantity" type="number" min="1" max="99" value="1" aria-label="Put quantity" disabled>
+                        </div>
                         <div id="put-options">Options loading...</div>
                     </div>
                 </div>
             </div>
 
             <div class="current-positions">
-                <h3>Active Positions</h3>
+                <h3>Active Positions: <span id="active-positions-value">$0.00</span></h3>
+                <div id="margin-risk" class="margin-risk" hidden>Equity: $0.00 | Required Equity: $0.00</div>
                 <div id="positions-list" class="positions-list">
                     <div class="no-positions">No active positions...</div>
                 </div>
@@ -134,6 +157,8 @@
 
         </div>
     </div>
+
+    <div id="toast-area" class="toast-area"></div>
 
     <script src="src/game.js"></script>
     <script src="src/leaderboard.js"></script>

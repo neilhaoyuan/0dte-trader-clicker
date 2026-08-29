@@ -117,7 +117,8 @@ body{
     grid-template-columns: 64px minmax(0, 1fr) 96px 160px;
 }
 
-.leaderboard-menu {
+.leaderboard-menu,
+.perks-menu {
     background-color: #CAE7B9;
     border: 3px solid #000;
     box-shadow: 6px 6px 0 #000;
@@ -131,13 +132,35 @@ body{
     z-index: 90;
 }
 
-.leaderboard-menu[hidden] {
+.perks-menu {
+    right: 240px;
+    width: 300px;
+}
+
+.leaderboard-menu[hidden],
+.perks-menu[hidden] {
     display: none;
 }
 
-.leaderboard-menu h3 {
+.leaderboard-menu h3,
+.perks-menu h3 {
     font-size: 13px;
     margin: 0 0 10px;
+}
+
+.perks-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    line-height: 2;
+}
+
+.perk-locked {
+    opacity: 0.38;
+}
+
+.perk-unlocked {
+    opacity: 1;
 }
 
 .leaderboard-list {
@@ -177,31 +200,49 @@ body{
 /* Status bar */
 
 .status-bar{
+    align-items: center;
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
     margin: -20px -20px 12px -20px;
     padding: 12px;
     background-color: #A3D585;
-    justify-content: space-between;
+    justify-content: flex-start;
     position: sticky;
     top: 0;
     z-index: 80;
 }
 
+.stats-group {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 20px;
+    min-width: 0;
+}
+
 .stat{
+    flex: 0 0 auto;
     margin-top: 5px;
+    white-space: nowrap;
 }
 
 .button-group {
     display: flex;
-    flex-wrap: wrap;
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
     gap: 8px;
     justify-content: flex-end;
+    margin-left: auto;
+    min-width: 0;
 }
 
 .button-group button {
+    flex: 0 0 auto;
+    font-family: 'Press Start 2P';
     margin: 0;
+    white-space: nowrap;
 }
 
 #give-up-button{
@@ -252,7 +293,7 @@ body{
 .right-panel{
     flex: 1;
     font-size: 13px;
-    min-width: 300px;
+    min-width: 340px;
 }
 
 .right-panel button {
@@ -263,15 +304,80 @@ body{
 }
 
 .refresh-timer{
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
     margin-bottom: 16px;
+}
+
+.refresh-timer span {
+    white-space: nowrap;
+}
+
+#force-refresh-button {
+    flex: 0 0 34px;
+    font-size: 16px;
+    height: 34px;
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+    width: 34px;
+}
+
+#force-refresh-button[hidden] {
+    display: none;
 }
 
 .call-column, .put-column{
     margin-bottom: 20px;
 }
 
+.option-heading-row {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin: 0 0 10px;
+}
+
+.option-heading-row h4 {
+    margin: 0;
+}
+
+.option-heading-row input {
+    font-family: 'Press Start 2P';
+    font-size: 12px;
+    height: 30px;
+    min-width: 0;
+    padding: 4px;
+    width: 58px;
+}
+
+.option-heading-row input[hidden] {
+    display: none;
+}
+
 .current-positions{
     margin-top: 20px
+}
+
+.current-positions h3 {
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.margin-risk {
+    font-size: 9px;
+    line-height: 1.6;
+    margin: -4px 0 8px;
+}
+
+.margin-risk[hidden] {
+    display: none;
+}
+
+.margin-risk.is-danger {
+    color: red;
 }
 
 .positions-list {
@@ -280,6 +386,126 @@ body{
     overflow-y: auto;
     border: 2px solid #000;
     padding: 2px;
+}
+
+.sell-early-button {
+    display: inline-block;
+    font-size: 9px;
+    margin: 4px 0 8px;
+    max-width: 100%;
+    padding-left: 8px;
+    padding-right: 8px;
+    width: auto;
+}
+
+.toast-area {
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    position: fixed;
+    right: 20px;
+    z-index: 250;
+}
+
+.level-toast {
+    background: #fff;
+    border: 3px solid #000;
+    box-shadow: 5px 5px 0 #000;
+    font-size: 11px;
+    line-height: 1.7;
+    padding: 12px;
+}
+
+@media (max-width: 1500px) {
+    .status-bar {
+        gap: 16px;
+    }
+
+    .stats-group {
+        gap: 16px;
+    }
+
+    .stat {
+        font-size: 14px;
+    }
+
+    .button-group {
+        gap: 6px;
+    }
+
+    .button-group button {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+}
+
+@media (max-width: 1150px) {
+    .stats-group,
+    .button-group {
+        width: 100%;
+    }
+
+    .button-group {
+        justify-content: flex-start;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 1250px) {
+    body {
+        padding: 14px;
+    }
+
+    .status-bar {
+        gap: 14px;
+        margin: -14px -14px 10px -14px;
+        padding: 10px;
+    }
+
+    .stats-group {
+        gap: 14px;
+    }
+
+    .stat {
+        font-size: 13px;
+    }
+
+    .button-group button {
+        font-size: 11px;
+        padding: 5px 7px;
+    }
+
+    .main-content {
+        gap: 14px;
+    }
+
+    .stock-chart {
+        height: clamp(250px, 43vh, 440px);
+    }
+
+    .right-panel {
+        font-size: 11px;
+        min-width: 330px;
+    }
+
+    .right-panel button {
+        font-size: 10px;
+    }
+
+    .refresh-timer {
+        font-size: 10px;
+        gap: 8px;
+    }
+
+    .option-heading-row h4 {
+        font-size: 13px;
+    }
+
+    .current-positions h3 {
+        font-size: 13px;
+    }
 }
 
 @media (max-width: 900px) {
@@ -298,5 +524,17 @@ body{
         right: 16px;
         top: 96px;
         width: auto;
+    }
+
+    .perks-menu {
+        left: 16px;
+        right: 16px;
+        top: 96px;
+        width: auto;
+    }
+
+    #force-refresh-button {
+        align-self: flex-end;
+        width: 34px;
     }
 }

@@ -128,22 +128,42 @@ class GameLogic {
         this.stock = new StockSimulator();
         this.activeOptions = [];
         this.settledOptions = [];
+        this.marginLimit = 50;
+        this.maintenanceRate = 0.5;
+        this.marginDebt = 0;
+        this.gameOver = false;
+        this.lastLevelUps = [];
     }
 
     // Buys options
-    buyOption(strike, expirySeconds, type){
+    buyOption(strike, expirySeconds, type, quantity){
+        const optionQuantity = Math.max(1, Math.floor(Number(quantity) || 1));
         const T = expirySeconds / (365 * 24 * 60 * 60); // Annualize in-game expirySeconds for Black Scholes
         const price = roundToCents(blackScholes(this.stock.getPrice(), strike, T, 0.05, 2, type)); // Determine price
+        const totalPrice = roundToCents(price * optionQuantity);
         
         // Push object of bought optional detail into list if we can buy it
-        if (this.cash >= price){
-            this.cash -= price;
-            this.activeOptions.push({
-                strike: strike,
-                timeLeft: expirySeconds,
-                type: type,
-                purchasePrice: price,
-                currentValue: price});
+        if (this.canAfford(totalPrice)){
+            this.spendCash(totalPrice);
+            const existingOption = this.activeOptions.find(function(option) {
+                return option.strike === strike &&
+                    option.timeLeft === expirySeconds &&
+                    option.type === type &&
+                    option.purchasePrice === price;
+            });
+
+            if (existingOption) {
+                existingOption.quantity += optionQuantity;
+            } else {
+                this.activeOptions.push({
+                    strike: strike,
+                    timeLeft: expirySeconds,
+                    type: type,
+                    quantity: optionQuantity,
+                    purchasePrice: price,
+                    currentValue: price
+                });
+            }
             this.updatePeakCash();
             saveGame(this);
             return true;
@@ -158,25 +178,66 @@ class GameLogic {
     settleOut(option){
         // Determines the payoff (uses Black Scholes function as we have a catch statement in there)
         const payoff = roundToCents(blackScholes(this.stock.getPrice(), option.strike, 0, 0.05, 2, option.type));
-        this.cash += payoff;
-        this.updatePeakCash();
+        const quantity = this.getOptionQuantity(option);
+        const totalPayoff = roundToCents(payoff * quantity);
+        this.receiveCash(totalPayoff);
         option.currentValue = payoff;
         option.timeLeft = 0;
         option.settled = true;
         option.settledTicksLeft = 4;
 
         // Determines profit to see if XP should be awarded
-        const profit = payoff - option.purchasePrice
-            if (profit > 0){
-                this.xp += Math.floor(profit * 10);
-            }
+        const profit = totalPayoff - (option.purchasePrice * quantity)
+        if (profit > 0){
+            this.xp += Math.floor(profit * 10);
+        }
+        this.checkLevelUp(true);
         this.settledOptions.unshift(option);
         saveGame(this);
+    }
+
+    sellOptionEarly(option){
+        if (!this.hasPerk(4) || option.settled) {
+            saveGame(this);
+            return false;
+        }
+
+        const optionIndex = this.activeOptions.indexOf(option);
+        if (optionIndex === -1) {
+            saveGame(this);
+            return false;
+        }
+
+        const quantity = this.getOptionQuantity(option);
+        const payout = roundToCents(option.currentValue * 0.85);
+        const totalPayout = roundToCents(payout * quantity);
+        const profit = totalPayout - (option.purchasePrice * quantity);
+        this.lastLevelUps = [];
+
+        this.receiveCash(totalPayout);
+
+        if (profit > 0) {
+            this.xp += Math.floor(profit * 10);
+        }
+        this.checkLevelUp(true);
+
+        option.currentValue = payout;
+        option.timeLeft = 0;
+        option.settled = true;
+        option.soldEarly = true;
+        option.settledTicksLeft = 4;
+
+        this.activeOptions.splice(optionIndex, 1);
+        this.settledOptions.unshift(option);
+        this.checkMarginCall();
+        saveGame(this);
+        return true;
     }
 
     // Updates logic
     tick(){
         const SEC_PER_TICK = 900;  // 15 in-game minutes per tick
+        this.lastLevelUps = [];
 
         this.stock.tick(); // Update stock price
 
@@ -184,6 +245,7 @@ class GameLogic {
         for (let i = 0; i < this.activeOptions.length; i++){
             let curOpt = this.activeOptions[i];
             curOpt.timeLeft -= SEC_PER_TICK;
+            curOpt.quantity = this.getOptionQuantity(curOpt);
             
             // Checks if current option is now expired, if so settle it
             if (curOpt.timeLeft <= 0){
@@ -204,6 +266,7 @@ class GameLogic {
         this.settledOptions = this.settledOptions.filter(function(option) {
             return option.settledTicksLeft > 0;
         });
+        this.checkMarginCall();
         saveGame(this);
     }
 
@@ -215,14 +278,100 @@ class GameLogic {
             level: this.level,
             xp: this.xp,
             stockPrice: this.stock.getPrice(),
-            options: this.settledOptions.concat(this.activeOptions)
+            options: this.settledOptions.concat(this.activeOptions),
+            margin: this.getMarginState(),
+            gameOver: this.gameOver
         };
+    }
+
+    getMarginState(){
+        const positionsValue = roundToCents(this.activeOptions.reduce(function(total, option) {
+            const quantity = option.quantity || 1;
+            return total + (option.currentValue * quantity);
+        }, 0));
+        const debt = roundToCents(this.marginDebt);
+        const equity = roundToCents(this.cash + positionsValue - debt);
+        const maintenanceRequirement = roundToCents(debt * this.maintenanceRate);
+
+        return {
+            unlocked: this.hasPerk(10),
+            marginLimit: this.marginLimit,
+            positionsValue: positionsValue,
+            debt: debt,
+            equity: equity,
+            maintenanceRequirement: maintenanceRequirement,
+            marginCalled: debt > 0 && equity < maintenanceRequirement
+        };
+    }
+
+    checkMarginCall(){
+        const margin = this.getMarginState();
+
+        if (margin.marginCalled) {
+            this.cash = 0;
+            this.marginDebt = 0;
+            this.activeOptions = [];
+            this.gameOver = true;
+            this.updatePeakCash();
+            localStorage.removeItem('optionsGameState');
+        }
     }
 
     updatePeakCash(){
         if (this.cash > this.peakCash) {
             this.peakCash = this.cash;
         }
+    }
+
+    canAfford(price) {
+        if (this.hasPerk(10)) {
+            const extraDebt = Math.max(0, price - this.cash);
+            return this.marginDebt + extraDebt <= this.marginLimit;
+        }
+
+        return this.cash >= price;
+    }
+
+    spendCash(amount) {
+        if (amount <= this.cash) {
+            this.cash = roundToCents(this.cash - amount);
+            return;
+        }
+
+        const debtAdded = roundToCents(amount - this.cash);
+        this.cash = 0;
+        this.marginDebt = roundToCents(this.marginDebt + debtAdded);
+    }
+
+    receiveCash(amount) {
+        let remainingAmount = roundToCents(amount);
+
+        if (this.marginDebt > 0) {
+            const debtPayment = Math.min(remainingAmount, this.marginDebt);
+            this.marginDebt = roundToCents(this.marginDebt - debtPayment);
+            remainingAmount = roundToCents(remainingAmount - debtPayment);
+        }
+
+        this.cash = roundToCents(this.cash + remainingAmount);
+        this.updatePeakCash();
+    }
+
+    hasPerk(level) {
+        return this.level >= level;
+    }
+
+    getOptionQuantity(option) {
+        return Math.max(1, Math.floor(Number(option.quantity) || 1));
+    }
+
+    getAvailableExpiries() {
+        const expiries = [3600, 7200, 10800, 14400];
+
+        if (this.hasPerk(8)) {
+            return expiries.concat([18000, 21600]);
+        }
+
+        return expiries;
     }
 
     // Determine strike prices based on current price
@@ -233,7 +382,11 @@ class GameLogic {
         // Determines the middle strike price that will be a multiple of 5
         const middleStrike = 5 * Math.round(currentPrice / 5);
 
-        return [middleStrike - 10, middleStrike - 5, middleStrike, middleStrike + 5, middleStrike + 10];        
+        if (this.hasPerk(3)) {
+            return [middleStrike - 20, middleStrike - 10, middleStrike - 5, middleStrike, middleStrike + 5, middleStrike + 10, middleStrike + 20];
+        }
+
+        return [middleStrike - 10, middleStrike - 5, middleStrike, middleStrike + 5, middleStrike + 10];
     }
 
     // Calculates option price without purchasing it
@@ -245,14 +398,37 @@ class GameLogic {
     }
 
     // Checks if the player has leveled up
-    checkLevelUp(){
-        // Determines the xp threshold for user's level
-        const threshold = this.level * 100;
+    checkLevelUp(appendEvents){
+        if (!appendEvents) {
+            this.lastLevelUps = [];
+        }
 
-        if (this.xp >= threshold){
+        const unlockedPerks = {
+            2: 'Multi-Buy',
+            3: 'Better Option Chain',
+            4: 'Sell Early',
+            6: 'Force Options Market Refresh',
+            8: 'Longer Expiries',
+            10: 'Margin'
+        };
+        while (this.xp >= this.level * 100){
+            const threshold = this.level * 100;
             this.xp -= threshold;
             this.level += 1;
+            const bonus = roundToCents(this.level * 7.5);
+            this.receiveCash(bonus);
+            this.lastLevelUps.push({
+                level: this.level,
+                bonus: bonus,
+                perk: unlockedPerks[this.level] || null
+            });
         }
+
+        if (this.lastLevelUps.length > 0) {
+            saveGame(this);
+        }
+
+        return this.lastLevelUps;
     }
 }
 
@@ -267,6 +443,7 @@ function saveGame(gameLogic) {
         peakCash: gameLogic.peakCash,
         level: gameLogic.level,
         xp: gameLogic.xp,
+        marginDebt: gameLogic.marginDebt,
         stockPrice: gameLogic.stock.price
     };
     localStorage.setItem('optionsGameState', JSON.stringify(gameState));
@@ -282,6 +459,7 @@ function loadGame(gameLogic) {
             gameLogic.peakCash = gameState.peakCash || gameLogic.cash;
             gameLogic.level = gameState.level || 1;
             gameLogic.xp = gameState.xp || 0;
+            gameLogic.marginDebt = gameState.marginDebt || 0;
             gameLogic.stock.price = gameState.stockPrice || 100;
         } catch (e) {
             console.log('Failed to load saved game');

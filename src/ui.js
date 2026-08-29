@@ -11,6 +11,94 @@ function updateStatusBar(gameState){
     const xpElement = document.getElementById('xp');
     const xpThreshold = gameState.level * 100;
     xpElement.textContent = gameState.xp + '/' + xpThreshold;
+
+    const marginElement = document.getElementById('margin-status');
+    const marginDebtElement = document.getElementById('margin-debt');
+    if (marginElement && gameState.margin) {
+        marginElement.hidden = !gameState.margin.unlocked;
+        if (marginDebtElement) {
+            marginDebtElement.textContent = '$' + gameState.margin.debt.toFixed(2);
+        }
+    }
+}
+
+function updatePerksMenu(gameState) {
+    const perksList = document.getElementById('perks-list');
+    if (!perksList) {
+        return;
+    }
+
+    const perks = [
+        { level: 2, label: 'Multi-Buy' },
+        { level: 3, label: 'Better Chain' },
+        { level: 4, label: 'Sell Early' },
+        { level: 6, label: 'Force Refresh' },
+        { level: 8, label: 'Longer Expiries' },
+        { level: 10, label: 'Margin' }
+    ];
+    perksList.innerHTML = '';
+
+    perks.forEach(function(perk) {
+        const item = document.createElement('li');
+        item.textContent = 'Lv ' + perk.level + '  ' + perk.label;
+        item.className = gameState.level >= perk.level ? 'perk-unlocked' : 'perk-locked';
+        perksList.appendChild(item);
+    });
+}
+
+function updateQuantityControls(gameLogic) {
+    const quantityInputs = [
+        document.getElementById('call-quantity'),
+        document.getElementById('put-quantity')
+    ];
+    const unlocked = gameLogic.hasPerk(2);
+
+    quantityInputs.forEach(function(input) {
+        if (!input) {
+            return;
+        }
+
+        input.hidden = !unlocked;
+        input.disabled = !unlocked;
+        input.title = unlocked ? 'Contracts to buy' : 'Unlocks at Lv 2';
+        if (!unlocked) {
+            input.value = 1;
+        }
+    });
+}
+
+function getSelectedQuantity(inputId, gameLogic) {
+    if (!gameLogic.hasPerk(2)) {
+        return 1;
+    }
+
+    const input = document.getElementById(inputId);
+    const quantity = Math.floor(Number(input ? input.value : 1) || 1);
+    return Math.min(99, Math.max(1, quantity));
+}
+
+function formatSignedDollars(amount) {
+    const sign = amount >= 0 ? '+' : '-';
+    return sign + '$' + Math.abs(amount).toFixed(2);
+}
+
+function showLevelUpToasts(levelUps) {
+    const toastArea = document.getElementById('toast-area');
+    if (!toastArea || !levelUps || levelUps.length === 0) {
+        return;
+    }
+
+    levelUps.forEach(function(levelUp) {
+        const toast = document.createElement('div');
+        toast.className = 'level-toast';
+        const title = 'LEVEL ' + levelUp.level + (levelUp.perk ? ': ' + levelUp.perk + ' unlocked' : '');
+        toast.innerHTML = '<div>' + title + '</div><div>+$' + levelUp.bonus.toFixed(2) + '</div>';
+        toastArea.appendChild(toast);
+
+        setTimeout(function() {
+            toast.remove();
+        }, 3600);
+    });
 }
 
 function updateStockPrice(newPrice, previousPrice){
@@ -42,8 +130,9 @@ function generateOptions(gameLogic){
     const availableStrikes = gameLogic.getAvailableStrikes();
     const callElements = document.getElementById('call-options');
     const putElements = document.getElementById('put-options');
-    const possibleExpiry = [3600, 7200, 10800, 14400] // 1, 2, 3, adn 4 hours respectively in seconds
+    const possibleExpiry = gameLogic.getAvailableExpiries();
     const optionCount = 3;
+    updateQuantityControls(gameLogic);
 
     // Clear out the inside of the call and put elements, prep work for new buttons
     callElements.innerHTML = '';
@@ -66,17 +155,11 @@ function generateOptions(gameLogic){
         const button = document.createElement('button');
         button.textContent = 'Strike ' + randomStrike + ' | ' + (randomExpiry/3600) + ' hour | $' + callPrice.toFixed(2);
         button.addEventListener('click', function() {
-            if (gameLogic.cash >= callPrice){
-                gameLogic.cash -= callPrice;
-                gameLogic.activeOptions.push({
-                    strike: randomStrike,
-                    timeLeft: randomExpiry,
-                    type: 'call',
-                    purchasePrice: callPrice,
-                    currentValue: callPrice
-                });
+            if (gameLogic.buyOption(randomStrike, randomExpiry, 'call', getSelectedQuantity('call-quantity', gameLogic))){
                 updateStatusBar(gameLogic.getUserState());
-                updatePositionsList(gameLogic.getUserState().options);
+                updatePerksMenu(gameLogic.getUserState());
+                updateQuantityControls(gameLogic);
+                updatePositionsList(gameLogic.getUserState().options, gameLogic);
             }
         });
 
@@ -100,17 +183,11 @@ function generateOptions(gameLogic){
         const button = document.createElement('button');
         button.textContent = 'Strike ' + randomStrike + ' | ' + (randomExpiry/3600) + ' hour | $' + putPrice.toFixed(2);
         button.addEventListener('click', function() {
-            if (gameLogic.cash >= putPrice){
-                gameLogic.cash -= putPrice;
-                gameLogic.activeOptions.push({
-                    strike: randomStrike,
-                    timeLeft: randomExpiry,
-                    type: 'put',
-                    purchasePrice: putPrice,
-                    currentValue: putPrice
-                });
+            if (gameLogic.buyOption(randomStrike, randomExpiry, 'put', getSelectedQuantity('put-quantity', gameLogic))){
                 updateStatusBar(gameLogic.getUserState());
-                updatePositionsList(gameLogic.getUserState().options);
+                updatePerksMenu(gameLogic.getUserState());
+                updateQuantityControls(gameLogic);
+                updatePositionsList(gameLogic.getUserState().options, gameLogic);
             }
         });
 
@@ -118,8 +195,29 @@ function generateOptions(gameLogic){
     }
 }
 
-function updatePositionsList(options){
+function updatePositionsList(options, gameLogic){
     const positionsElement = document.getElementById('positions-list');
+    const activePositionsValueElement = document.getElementById('active-positions-value');
+    const marginRiskElement = document.getElementById('margin-risk');
+    const activePositionsValue = options.reduce(function(total, option) {
+        if (option.settled) {
+            return total;
+        }
+
+        const quantity = gameLogic ? gameLogic.getOptionQuantity(option) : (option.quantity || 1);
+        return total + (option.currentValue * quantity);
+    }, 0);
+
+    if (activePositionsValueElement) {
+        activePositionsValueElement.textContent = '$' + activePositionsValue.toFixed(2);
+    }
+
+    if (marginRiskElement && gameLogic) {
+        const margin = gameLogic.getMarginState();
+        marginRiskElement.hidden = !margin.unlocked || margin.debt <= 0;
+        marginRiskElement.textContent = 'Equity: $' + margin.equity.toFixed(2) + ' | Required Equity: $' + margin.maintenanceRequirement.toFixed(2);
+        marginRiskElement.className = margin.equity <= margin.maintenanceRequirement * 1.25 ? 'margin-risk is-danger' : 'margin-risk';
+    }
 
     // If there does not exist any options, display the no options div
     if (options.length === 0){
@@ -136,20 +234,20 @@ function updatePositionsList(options){
             positionDiv.className = 'position-card';
 
             // Determine details that will be put in positionDiv
-            let profitColor, profitSign;
-            const profitLoss = option.currentValue - option.purchasePrice;
+            let profitColor;
+            const quantity = gameLogic ? gameLogic.getOptionQuantity(option) : (option.quantity || 1);
+            const profitLossEach = option.currentValue - option.purchasePrice;
+            const profitLoss = profitLossEach * quantity;
             if (profitLoss >= 0){
                 profitColor = 'green';
-                profitSign = '+';
             }
             else{
                 profitColor = 'red';
-                profitSign = ''
             }
 
             // Build the option type of the position
             const typeDiv = document.createElement('div');
-            typeDiv.textContent = option.type.toUpperCase() + ' @ Strike $' + option.strike + (option.settled ? ' | SETTLED' : '');
+            typeDiv.textContent = quantity + 'x ' + option.type.toUpperCase() + ' @ Strike $' + option.strike + (option.settled ? (option.soldEarly ? ' | SOLD' : ' | SETTLED') : '');
             positionDiv.appendChild(typeDiv);
 
             // Build the time remaining of the position
@@ -159,19 +257,41 @@ function updatePositionsList(options){
 
             // Build purchase price
             const purchaseDiv = document.createElement('div');
-            purchaseDiv.textContent = 'Paid: $' + option.purchasePrice.toFixed(2);
+            purchaseDiv.textContent = 'Paid: $' + option.purchasePrice.toFixed(2) + ' x ' + quantity + ' = $' + (option.purchasePrice * quantity).toFixed(2);
             positionDiv.appendChild(purchaseDiv);
 
             // Build the value of the position
             const valueDiv = document.createElement('div');
-            valueDiv.textContent = 'Current Value: $' + option.currentValue.toFixed(2);
+            if (option.soldEarly) {
+                valueDiv.textContent = 'Sold For: $' + option.currentValue.toFixed(2) + ' x ' + quantity + ' = $' + (option.currentValue * quantity).toFixed(2);
+            } else {
+                valueDiv.textContent = (option.settled ? 'Value at Settlement: $' : 'Current Value: $') + option.currentValue.toFixed(2) + ' x ' + quantity + ' = $' + (option.currentValue * quantity).toFixed(2);
+            }
             positionDiv.appendChild(valueDiv);
 
             // Build the PnL of the position
             const plDiv = document.createElement('div');
-            plDiv.textContent = 'P/L: ' + profitSign + '$' + profitLoss.toFixed(2);
+            plDiv.textContent = 'P/L: ' + formatSignedDollars(profitLoss) + ' | ' + formatSignedDollars(profitLossEach) + ' x ' + quantity;
             plDiv.style.color = profitColor;
             positionDiv.appendChild(plDiv);
+
+            if (gameLogic && gameLogic.hasPerk(4) && !option.settled) {
+                const sellButton = document.createElement('button');
+                const sellPayout = roundToCents(option.currentValue * 0.85);
+                sellButton.textContent = 'SELL $' + (sellPayout * quantity).toFixed(2);
+                sellButton.className = 'sell-early-button';
+                sellButton.addEventListener('click', function() {
+                    gameLogic.sellOptionEarly(option);
+                    const levelUps = gameLogic.lastLevelUps.slice();
+                    const gameState = gameLogic.getUserState();
+                    updateStatusBar(gameState);
+                    updatePerksMenu(gameState);
+                    updateQuantityControls(gameLogic);
+                    showLevelUpToasts(levelUps);
+                    updatePositionsList(gameState.options, gameLogic);
+                });
+                positionDiv.appendChild(sellButton);
+            }
 
             // Build the seperator 
             const sepDiv = document.createElement('div');

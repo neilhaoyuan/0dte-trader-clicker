@@ -30,7 +30,9 @@ window.addEventListener('DOMContentLoaded', function() {
     updateStatusBar(game.getUserState());
     updateStockPrice(game.stock.getPrice(), previousPrice);
     generateOptions(game);
-    updatePositionsList(game.getUserState().options);
+    updatePositionsList(game.getUserState().options, game);
+    updatePerksMenu(game.getUserState());
+    updateQuantityControls(game);
     updateAdvisor(game.getUserState());
 
     // Setup music toggle
@@ -40,6 +42,11 @@ window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('start-button').addEventListener('click', async function() {
         document.getElementById('start-screen').style.display = 'none';
         loadGame(game);
+        updateStatusBar(game.getUserState());
+        updatePerksMenu(game.getUserState());
+        updateQuantityControls(game);
+        generateOptions(game);
+        updatePositionsList(game.getUserState().options, game);
         await startLeaderboardSession().catch(function(error) {
             console.error(error);
         });
@@ -63,12 +70,25 @@ window.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    document.getElementById('perks-toggle').addEventListener('click', function(event) {
+        event.stopPropagation();
+        const perksMenu = document.getElementById('perks-menu');
+        perksMenu.hidden = !perksMenu.hidden;
+        updatePerksMenu(game.getUserState());
+    });
+
     document.addEventListener('click', function(event) {
         const leaderboardMenu = document.getElementById('leaderboard-menu');
         const leaderboardToggle = document.getElementById('leaderboard-toggle');
+        const perksMenu = document.getElementById('perks-menu');
+        const perksToggle = document.getElementById('perks-toggle');
 
         if (!leaderboardMenu.contains(event.target) && event.target !== leaderboardToggle) {
             leaderboardMenu.hidden = true;
+        }
+
+        if (!perksMenu.contains(event.target) && event.target !== perksToggle) {
+            perksMenu.hidden = true;
         }
     });
 
@@ -127,20 +147,60 @@ window.addEventListener('DOMContentLoaded', function() {
     
     // Track tick count for refreshing options
     let tickCount = 0;
-    const REFRESH_INTERVAL = 10; // Refresh every 10 ticks
+    let forceRefreshCooldown = 0;
+    const REFRESH_INTERVAL = 15; // Refresh every 15 ticks
+    const FORCE_REFRESH_COOLDOWN = 10;
+    const forceRefreshButton = document.getElementById('force-refresh-button');
+
+    function updateForceRefreshButton() {
+        if (!game.hasPerk(6)) {
+            forceRefreshButton.hidden = true;
+            forceRefreshButton.disabled = true;
+            return;
+        }
+
+        forceRefreshButton.hidden = false;
+        forceRefreshButton.disabled = forceRefreshCooldown > 0;
+        forceRefreshButton.textContent = '\u21bb';
+        forceRefreshButton.title = forceRefreshCooldown > 0 ? 'Refresh cooldown: ' + forceRefreshCooldown : 'Refresh Market';
+        forceRefreshButton.setAttribute('aria-label', forceRefreshButton.title);
+    }
+
+    forceRefreshButton.addEventListener('click', function() {
+        if (!game.hasPerk(6) || forceRefreshCooldown > 0) {
+            return;
+        }
+
+        generateOptions(game);
+        forceRefreshCooldown = FORCE_REFRESH_COOLDOWN;
+        updateForceRefreshButton();
+    });
+    updateForceRefreshButton();
     
     // Start game loop - tick every 1 second (1000ms)
-    setInterval(function() {        
+    const gameLoop = setInterval(function() {        
         // Update the game state
         previousPrice = game.stock.getPrice();
-        game.tick();        
-        game.checkLevelUp();
+        game.tick();
+        const levelUps = game.lastLevelUps.slice();
         
         // Update the UI with new game state
         const gameState = game.getUserState();
+        if (gameState.gameOver) {
+            clearInterval(gameLoop);
+            showGameOver(0, gameState.level, gameState.peakCash);
+            return;
+        }
+
         updateStatusBar(gameState);
+        updatePerksMenu(gameState);
+        updateQuantityControls(game);
+        if (levelUps.length > 0) {
+            generateOptions(game);
+        }
+        showLevelUpToasts(levelUps);
         updateStockPrice(gameState.stockPrice, previousPrice);
-        updatePositionsList(gameState.options);
+        updatePositionsList(gameState.options, game);
 
         // Update advisor every 5 seconds
         if (tickCount % 7 === 0){
@@ -162,11 +222,15 @@ window.addEventListener('DOMContentLoaded', function() {
         
         // Update countdown
         tickCount++;
+        if (forceRefreshCooldown > 0) {
+            forceRefreshCooldown--;
+        }
         const ticksUntilRefresh = REFRESH_INTERVAL - (tickCount % REFRESH_INTERVAL); // Determine ticks left before next refresh
         const secondsUntilRefresh = ticksUntilRefresh * 1; // 1s per tick
         document.getElementById('countdown').textContent = secondsUntilRefresh;
+        updateForceRefreshButton();
         
-        // Refresh options every 10 ticks and change the advisor message
+        // Refresh options every 15 ticks and change the advisor message
         if (tickCount % REFRESH_INTERVAL === 0) {
             generateOptions(game);
         }
